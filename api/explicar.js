@@ -48,7 +48,7 @@ export default async function handler(req, res) {
 
     const data = await response.json();
     
-    // CORREÇÃO AQUI: Sintaxe limpa para pegar a resposta da IA sem quebrar o Node.js
+    // Sintaxe limpa e segura para pegar a resposta do DeepSeek
     const respostaIa = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : null;
     
     if (!respostaIa) {
