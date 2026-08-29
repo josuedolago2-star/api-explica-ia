@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // Configuração de cabeçalhos para permitir que o app Android se conecte (CORS)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -21,10 +20,9 @@ export default async function handler(req, res) {
 
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ erro: 'Chave de API não configurada no servidor Vercel.' });
+      return res.status(500).json({ erro: 'Chave de API nao configurada na Vercel.' });
     }
 
-    // Chamada oficial ao OpenRouter forçando o DeepSeek Chat estável
     const response = await fetch('https://openrouter.ai', {
       method: 'POST',
       headers: {
@@ -44,12 +42,18 @@ export default async function handler(req, res) {
             content: texto 
           }
         ],
-        temperature: 0.3 // Deixa a IA mais precisa e menos criativa/fujona do tema
+        temperature: 0.3
       })
     });
 
     const data = await response.json();
-    const respostaIa = data.choices?.[0]?.message?.content || 'Não foi possível gerar uma explicação teológica.';
+    
+    // CORREÇÃO AQUI: Sintaxe limpa para pegar a resposta da IA sem quebrar o Node.js
+    const respostaIa = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : null;
+    
+    if (!respostaIa) {
+      return res.status(500).json({ erro: 'O provedor de IA nao retornou uma resposta valida.' });
+    }
     
     return res.status(200).json({ resposta: respostaIa });
 
