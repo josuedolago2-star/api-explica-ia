@@ -18,12 +18,21 @@ export default async function handler(req, res) {
       return res.status(400).json({ erro: 'O campo "texto" é obrigatório.' });
     }
 
-    const apiKey = process.env.API_KEY;
+    const apiKey = process.env.API_KEY ? process.env.API_KEY.trim() : null;
     if (!apiKey) {
       return res.status(500).json({ erro: 'Chave de API nao configurada na Vercel.' });
     }
 
-    const response = await fetch('https://openrouter.ai', {
+    // Define os servidores e modelos corretos baseados na sua chave cadastrada
+    const urlIa = apiKey.startsWith('sk-or-') 
+      ? 'https://openrouter.ai' 
+      : 'https://deepseek.com';
+
+    const modeloIa = apiKey.startsWith('sk-or-')
+      ? 'deepseek/deepseek-chat:free'
+      : 'deepseek-chat';
+
+    const response = await fetch(urlIa, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -31,7 +40,7 @@ export default async function handler(req, res) {
         'HTTP-Referer': 'https://bibliasagrada.com',
       },
       body: JSON.stringify({
-        model: 'deepseek/deepseek-chat:free',
+        model: modeloIa,
         messages: [
           { 
             role: 'system', 
@@ -46,10 +55,17 @@ export default async function handler(req, res) {
       })
     });
 
-    const data = await response.json();
+    const textoPuro = await response.text();
     
-    // Sintaxe limpa e segura para pegar a resposta do DeepSeek
-    const respostaIa = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : null;
+    // Se a IA der erro e devolver HTML, tratamos aqui de forma limpa para não quebrar o app
+    if (textoPuro.trim().startsWith('<!DOCTYPE')) {
+      return res.status(500).json({ erro: 'Chave de API rejeitada pelo provedor da IA. Verifique se o seu token na Vercel e o saldo da conta estao ativos.' });
+    }
+
+    const data = JSON.parse(textoPuro);
+    
+    // SINTAXE CORRIGIDA: Garante que o Node.js leia a resposta sem dar erro 500
+    const respostaIa = data && data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : null;
     
     if (!respostaIa) {
       return res.status(500).json({ erro: 'O provedor de IA nao retornou uma resposta valida.' });
